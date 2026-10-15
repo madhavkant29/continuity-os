@@ -1,0 +1,24 @@
+# Public demo deployment override. Only put synthetic information in the application.
+services:
+  frontend:
+    environment:
+      COOKIE_SECURE: 'true'
+      PUBLIC_APP_ORIGIN: https://${PUBLIC_DOMAIN:?Set public domain}
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:?Configure a DNS name for HTTPS}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      frontend: {condition: service_started}
+    restart: unless-stopped
+    logging: {driver: json-file, options: {max-size: '10m', max-file: '3'}}
+volumes:
+  caddy_data:
+  caddy_config:

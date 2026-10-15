@@ -1,0 +1,62 @@
+services:
+  falkordb:
+    image: falkordb/falkordb-server:latest
+    environment:
+      FALKOR_PASSWORD: ${FALKOR_PASSWORD:?Run python scripts/configure.py first}
+      REDIS_ARGS: "--requirepass ${FALKOR_PASSWORD:?Missing graph password} --appendonly yes --appendfsync everysec"
+    volumes:
+      - falkor_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", 'REDISCLI_AUTH="$${FALKOR_PASSWORD}" redis-cli ping | grep -q PONG']
+      interval: 15s
+      timeout: 5s
+      retries: 12
+    logging: {driver: json-file, options: {max-size: '10m', max-file: '3'}}
+
+  backend:
+    build: ./backend
+    environment:
+      FALKOR_HOST: falkordb
+      FALKOR_PORT: '6379'
+      FALKOR_PASSWORD: ${FALKOR_PASSWORD:?Missing graph password}
+      FALKOR_GRAPH: continuity_demo
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Missing API key}
+      APP_MODE: ${APP_MODE:-demo}
+      ENABLE_JUDGE_DEMO: ${ENABLE_JUDGE_DEMO:-false}
+      ENABLE_LLM_ROUTER: ${ENABLE_LLM_ROUTER:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    depends_on:
+      falkordb: {condition: service_healthy}
+    # Loopback only for developer tooling. No backend port is exposed publicly.
+    ports:
+      - '127.0.0.1:${BACKEND_HOST_PORT:-8000}:8000'
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; assert urlopen('http://127.0.0.1:8000/api/health',timeout=3).status==200"]
+      interval: 20s
+      timeout: 5s
+      retries: 6
+    logging: {driver: json-file, options: {max-size: '10m', max-file: '3'}}
+
+  frontend:
+    build: ./frontend
+    environment:
+      BACKEND_INTERNAL_URL: http://backend:8000
+      PUBLIC_APP_ORIGIN: http://localhost:3000
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:?Missing API key}
+      FRONTEND_SESSION_SECRET: ${FRONTEND_SESSION_SECRET:?Missing session secret}
+      APP_MODE: ${APP_MODE:-demo}
+      ENABLE_JUDGE_DEMO: ${ENABLE_JUDGE_DEMO:-false}
+      APP_LOGIN_USER: ${APP_LOGIN_USER:?Missing user}
+      APP_LOGIN_PASSWORD_HASH: ${APP_LOGIN_PASSWORD_HASH:?Missing password hash}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    depends_on:
+      backend: {condition: service_healthy}
+    ports:
+      - '127.0.0.1:3000:3000'
+    restart: unless-stopped
+    logging: {driver: json-file, options: {max-size: '10m', max-file: '3'}}
+
+volumes:
+  falkor_data:
