@@ -84,7 +84,15 @@ def bootstrap(request: Request):
         raise HTTPException(status_code=403, detail="Invalid demo workspace")
     graph = GraphStore(graph_name=graph_name)
     try:
+        if not graph.is_seeded():
+            # Bound the number of persistent guest namespaces on the shared host.
+            max_graphs = int(os.getenv("MAX_DEMO_GRAPHS", "250"))
+            if app.state.store.count_judge_graphs() >= max_graphs:
+                raise HTTPException(status_code=503,
+                                    detail="Demo capacity reached; an operator must clean up stale workspaces")
         graph.ensure_seeded()
+    except HTTPException:
+        raise
     except Exception:
         # The client must not receive connection details or internal error messages.
         raise HTTPException(status_code=503, detail="Demo initialization unavailable") from None

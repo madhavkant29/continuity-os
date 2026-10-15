@@ -12,6 +12,10 @@ class StubGraph:
         return {"id":repair_id,"approved_by":actor}
     def read(self, *args):
         return [[1]]
+    def is_seeded(self):
+        return False
+    def count_judge_graphs(self):
+        return 0
 
 
 def test_api_refuses_unauthorized_reads(monkeypatch):
@@ -71,6 +75,36 @@ def test_guest_graph_requires_valid_scope(monkeypatch):
     assert selected[-2:]==[guest['x-demo-graph'],'seeded']
     assert client.post('/api/demo/bootstrap',headers={'x-internal-api-key':'x'*48}).status_code==403
     assert client.post('/api/demo/bootstrap',headers={**guest,'x-internal-api-key':'bad'}).status_code==401
+
+
+def test_guest_bootstrap_enforces_workspace_cap(monkeypatch):
+    import importlib
+    module=importlib.import_module('app.main')
+    monkeypatch.setenv('INTERNAL_API_KEY','x'*48)
+    monkeypatch.setenv('APP_MODE','demo')
+    monkeypatch.setenv('ENABLE_JUDGE_DEMO','true')
+    monkeypatch.setenv('MAX_DEMO_GRAPHS','2')
+    class FullStore(StubGraph):
+        def count_judge_graphs(self):
+            return 2
+    app.state.store=FullStore()
+    seeded=[]
+    class TenantGraph(StubGraph):
+        def __init__(self,graph_name):pass
+        def ensure_seeded(self):seeded.append('seeded')
+    monkeypatch.setattr(module,'GraphStore',TenantGraph)
+    client=TestClient(app)
+    guest={'x-internal-api-key':'x'*48,'x-operator-role':'demo',
+           'x-demo-graph':'continuity_judge_'+'b'*24}
+    assert client.post('/api/demo/bootstrap',headers=guest).status_code==503
+    assert seeded==[]
+
+    class ExistingGraph(TenantGraph):
+        def is_seeded(self):
+            return True
+    monkeypatch.setattr(module,'GraphStore',ExistingGraph)
+    assert client.post('/api/demo/bootstrap',headers=guest).status_code==201
+    assert seeded==['seeded']
 
 
 def test_disabled_demo_refuses_scope(monkeypatch):

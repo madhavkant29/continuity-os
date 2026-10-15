@@ -86,6 +86,12 @@ One-click demo is intentionally public **only for fictional data**. On first use
 
 To disable judge access, set `ENABLE_JUDGE_DEMO=false` and restart the services. Do not enable judge access for a live organization. Each demo session creates a persistent graph; enable trusted-ingress rate limiting and operational quotas for public hosting, and delete stale guest graphs during maintenance. The included process-local limit is defense in depth, **not** sufficient protection against distributed abuse.
 
+### Public demo maintenance
+
+- **Edge rate limits:** the public Caddy layer (built from `deploy/caddy/Dockerfile` with the official `caddy-ratelimit` plugin) enforces per-client limits: 10 guest sign-ins/minute, 60 mutating API calls/minute and 600 total requests/minute. Tune them in `deploy/caddy/Caddyfile`.
+- **Guest workspace cap:** `MAX_DEMO_GRAPHS` (default 250) bounds persistent judge graphs; once reached, guest bootstrap returns 503 until an operator cleans up.
+- **Abandoned graph cleanup:** run inside the deployed stack — `docker compose exec backend python -m app.maintenance list`, then `docker compose exec backend python -m app.maintenance delete-all --yes` (or targeted `delete continuity_judge_<id> --yes`). Only guest namespaces can be touched; all guest data is synthetic, and a judge can recreate a fresh workspace by signing in again.
+
 ## Architectural notes
 
 ```text

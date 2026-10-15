@@ -6,5 +6,34 @@
         X-Frame-Options "DENY"
         Referrer-Policy "no-referrer"
     }
-    reverse_proxy frontend:3000
+    # Public-hosting abuse protection. The in-process backend throttle is only
+    # defense in depth; these edge limits are enforced before any application code.
+    rate_limit {
+        zone judge_signin {
+            match {
+                path /api/auth/demo
+            }
+            key {remote_host}
+            events 10
+            window 1m
+        }
+        zone mutating_requests {
+            match {
+                method POST PUT PATCH DELETE
+            }
+            key {remote_host}
+            events 60
+            window 1m
+        }
+        zone total_requests {
+            key {remote_host}
+            events 600
+            window 1m
+        }
+    }
+    reverse_proxy frontend:3000 {
+        # Replace any client-supplied value so the app's per-IP throttles key on
+        # the actual remote host observed by the trusted proxy.
+        header_up X-Real-IP {remote_host}
+    }
 }

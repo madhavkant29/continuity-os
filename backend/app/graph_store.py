@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import hashlib
 import os
+import re
 import uuid
 from typing import Any
 
@@ -15,6 +16,9 @@ from .sample import PERMISSIONS, ROSTER, SKILLS, TEAMS, WORKFLOWS
 from .solver import analyze, solve
 from .knowledge import passages, source_identity, rank_passages, KINDS
 
+
+
+JUDGE_GRAPH_RE = re.compile(r"^continuity_judge_[a-f0-9]{24}$")
 
 
 def encode(obj: Any) -> str:
@@ -33,6 +37,19 @@ class GraphStore:
 
     def read(self, cypher: str, params: dict | None = None) -> list[list]:
         return self.graph.ro_query(cypher, params or {}).result_set
+
+    def list_graph_names(self) -> list[str]:
+        return list(self.client.list_graphs())
+
+    def is_seeded(self) -> bool:
+        try:
+            rows = self.read("MATCH (w:Workflow) RETURN count(w)")
+        except Exception:
+            return False
+        return bool(rows and rows[0][0] > 0)
+
+    def count_judge_graphs(self) -> int:
+        return len([name for name in self.list_graph_names() if JUDGE_GRAPH_RE.fullmatch(name)])
 
     def write(self, cypher: str, params: dict | None = None) -> list[list]:
         return self.graph.query(cypher, params or {}).result_set

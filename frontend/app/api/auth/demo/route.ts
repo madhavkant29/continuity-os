@@ -16,7 +16,9 @@ export async function POST(req:NextRequest){
   const addr=req.headers.get('x-real-ip')||'anonymous';
   const now=Date.now();
   const current=requests.get(addr);
-  if(current && current.until>now && current.count>=5)
+  // Per-IP ceiling for an hour; judges behind shared NAT may legitimately open
+  // several workspaces. Edge rate limits (Caddy) additionally cap bursts.
+  if(current && current.until>now && current.count>=30)
     return NextResponse.json({detail:'Demo session limit reached. Please contact the team.'},{status:429});
   if(requests.size>2000)requests.clear();
   requests.set(addr,{count:current && current.until>now?current.count+1:1,until:now+60*60*1000});

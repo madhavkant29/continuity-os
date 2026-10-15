@@ -1,11 +1,28 @@
 # Public demo deployment override. Only put synthetic information in the application.
 services:
+  falkordb:
+    environment:
+      # Bound graph memory below the container cap: writes fail cleanly instead
+      # of the container being OOM-killed. Never silently evict graph data.
+      REDIS_ARGS: "--requirepass ${FALKOR_PASSWORD:?Missing graph password} --appendonly yes --appendfsync everysec --maxmemory 500mb --maxmemory-policy noeviction"
+    deploy:
+      resources:
+        limits: {cpus: '1.5', memory: 640m}
+  backend:
+    environment:
+      MAX_DEMO_GRAPHS: ${MAX_DEMO_GRAPHS:-250}
+    deploy:
+      resources:
+        limits: {cpus: '1.5', memory: 800m}
   frontend:
     environment:
       COOKIE_SECURE: 'true'
       PUBLIC_APP_ORIGIN: https://${PUBLIC_DOMAIN:?Set public domain}
+    deploy:
+      resources:
+        limits: {cpus: '1.0', memory: 512m}
   caddy:
-    image: caddy:2-alpine
+    build: ./deploy/caddy
     environment:
       PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:?Configure a DNS name for HTTPS}
     ports:
@@ -18,6 +35,9 @@ services:
     depends_on:
       frontend: {condition: service_started}
     restart: unless-stopped
+    deploy:
+      resources:
+        limits: {cpus: '0.5', memory: 192m}
     logging: {driver: json-file, options: {max-size: '10m', max-file: '3'}}
 volumes:
   caddy_data:
