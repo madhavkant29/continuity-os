@@ -29,7 +29,11 @@ This file now records checks that were **actually executed**, including the publ
 - Ticket import shows `PENDING_REVIEW`; reviewer confirmation marks it `VERIFIED`; exact `#L1` line-locator citation rendered.
 - Knowledge graph rendered with passage/document/decision/project/workflow/step/skill/permission/person nodes (30 nodes, 41 relations for the refund workflow).
 - Two parallel judge sessions are isolated (separate graphs; no cross-visibility of sources or repairs).
-- No private service key appeared in any browser request; zero uncaught page errors during the walkthrough.
+- No private service key appeared in any browser request; zero uncaught page errors during the walkthrough; zero console errors after the CSP fix.
+- Page refresh keeps the signed session; the in-app reset requires confirmation and restores the initial synthetic workspace.
+- Mobile viewport (390 px): hamburger menu present and opens the sidebar. Keyboard-only users can tab to **Explore live demo** and activate it with Enter.
+- A forced backend failure surfaces a visible error banner instead of a blank page. An expired signed session and a tampered signature are both rejected with a `/login` redirect.
+- A full recorded walkthrough (login → blocked simulation → repair → approval → drill → import → review → citations → graph → reset) is kept by the operator as `demo-walkthrough.webm` alongside these results.
 - `scripts/smoke_judge.py` **PASS** against the public HTTPS origin (login, ingestion, review, citations, graph, simulation, isolation, reset).
 
 ## Public-hosting safeguards
@@ -41,8 +45,7 @@ This file now records checks that were **actually executed**, including the publ
 
 ## Known limitations (honest boundaries)
 
-- Browser verification used headless Edge/Chromium; manual mobile-layout and keyboard-navigation checks were not visually reviewed.
-- Session-expiration UI behavior and the in-app reset confirmation were validated at the API/throttle level, not by waiting out a real 8-hour cookie.
+- Browser verification used headless Edge/Chromium with viewport emulation; no physical-device testing.
 - No WAF, no offsite backup, no HA; single small instance with AOF persistence only.
 - The sandbox drill proves simulated assignment feasibility, not real-world recovery. No real systems are connected.
 
