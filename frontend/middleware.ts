@@ -25,4 +25,4 @@ export async function middleware(req:NextRequest){
   res.headers.set('Cache-Control','no-store');
   return res;
 }
-export const config={matcher:['/((?!_next/static|_next/image|favicon.ico).*)']};
+export const config={matcher:['/((?!_next/static|_next/image|favicon.ico|icon.svg).*)']};
