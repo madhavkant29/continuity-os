@@ -4,6 +4,10 @@ A FalkorDB-backed organizational continuity simulator with graph-grounded agent 
 
 **Data classification:** This edition is a **single-organization, fictional-data sandbox**. It does not integrate with real identity providers, HR databases, payment systems, or production IAM. Do not put real personnel records, client contracts, or secrets into its document importer. Graph-backed simulation feasibility is not proof of real-world operational readiness.
 
+## Demo video
+
+[Watch the ContinuityOS video on YouTube](https://youtu.be/Bhth8cgta1s?si=Mqcecc0oTUYqTNES)
+
 ## Scope
 
 - Five fictional operational workflows; thirty employees and six departments. Each workflow has a linked Project, Decision and documented evidence.
